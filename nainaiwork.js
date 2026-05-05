@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, Events, REST, Routes, SlashCommandBuilder } from 'discord.js';
+import { Client, GatewayIntentBits, Events, REST, Routes, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import { initializeApp } from 'firebase/app';
 import { getDatabase, ref, get, set, runTransaction } from 'firebase/database';
 
@@ -120,12 +120,18 @@ client.on(Events.InteractionCreate, async (i) => {
     const balance = await getBalance(target.id);
     const total = await getTotal(target.id);
 
+    const embed = new EmbedBuilder()
+      .setColor(balance < 0 ? 0xED4245 : 0xFEE75C)
+      .setDescription(
+`目前陪陪資訊如下 :
+陪陪ID： ${target.username}
+
+總累積薪資： ${total} 元
+目前可提領： ${balance} 元`
+      );
+
     return i.reply({
-		content:
-		`目前陪陪資訊如下 :
-	陪陪ID： ${target.username}\n
-	總累積薪資： ${total} 元\n
-	目前可提領： ${balance} 元`,
+      embeds: [embed],
       ephemeral: true
     });
   }
@@ -149,14 +155,20 @@ client.on(Events.InteractionCreate, async (i) => {
     await updateBalance(target.id, amount);
     await addTotal(target.id, amount);
 
+    const embed = new EmbedBuilder()
+      .setColor(0xFEE75C)
+      .setDescription(
+`發薪完成！
+陪陪ID： ${target.username}
+
+此單金額： ${amount} 元
+工單日期： ${date}
+遊戲單別： ${type}
+闆闆名字： ${boss}`
+      );
+
     return i.reply({
-		content:
-		`發薪完成！
-	陪陪ID： ${target.username}\n
-	此單金額： ${amount} 元\n
-	工單日期： ${date}\n
-	遊戲單別： ${type}\n
-	闆闆名字： ${boss}`
+      embeds: [embed]
     });
   }
 
@@ -177,13 +189,20 @@ client.on(Events.InteractionCreate, async (i) => {
 
     await updateBalance(target.id, -amount);
 	  
-	const newBalance = balance - amount;
-	  
+    const newBalance = balance - amount;
+
+    const embed = new EmbedBuilder()
+      .setColor(newBalance < 0 ? 0xED4245 : 0xFEE75C)
+      .setDescription(
+`提領成功！
+陪陪ID： ${target.username}
+
+提領薪水： ${amount} 元
+當前剩餘薪水： ${newBalance} 元${newBalance < 0 ? "（已透支）" : ""}`
+      );
+
     return i.reply({
-		content: `提領成功！
-	陪陪ID： ${target.username}\n
-	提領薪水： ${amount} 元\n
-	當前剩餘薪水： ${newBalance} 元${newBalance < 0 ? "（已透支）" : ""}`
+      embeds: [embed]
     });
   }
 });
@@ -193,4 +212,5 @@ if (!process.env.TOKEN) {
   console.error("TOKEN 未設定");
   process.exit(1);
 }
+
 client.login(process.env.TOKEN);
