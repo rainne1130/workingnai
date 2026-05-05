@@ -130,9 +130,6 @@ client.on(Events.InteractionCreate, async (i) => {
     });
   }
 
-  // ======================
-  // add（發薪水）
-  // ======================
   if (i.commandName === "add") {
 
     if (!isAdmin) {
@@ -178,12 +175,10 @@ client.on(Events.InteractionCreate, async (i) => {
 
     const balance = await getBalance(target.id);
 
-    //if (balance < amount) {
-      //return i.reply({ content: "目前餘額不足", ephemeral: true });
-    //}
-
     await updateBalance(target.id, -amount);
-
+	  
+	const newBalance = balance - amount;
+	  
     return i.reply({
 		content: `提領成功！
 	陪陪ID： ${target.username}\n
