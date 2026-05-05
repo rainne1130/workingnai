@@ -19,11 +19,12 @@ const db = getDatabase(app);
 const ADMIN_ROLE = "老大";
 
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds
-  ]
+  intents: [GatewayIntentBits.Guilds]
 });
 
+// ======================
+// 指令
+// ======================
 const commands = [
   new SlashCommandBuilder()
     .setName('balance')
@@ -50,7 +51,7 @@ const commands = [
       o.setName('type').setDescription('遊戲單別').setRequired(true)
     )
     .addStringOption(o =>
-      o.setName('boss').setDescription('老闆名字').setRequired(true)
+      o.setName('boss').setDescription('闆闆名字').setRequired(true)
     ),
 
   new SlashCommandBuilder()
@@ -64,6 +65,9 @@ const commands = [
     )
 ];
 
+// ======================
+// 啟動
+// ======================
 client.once(Events.ClientReady, async () => {
   console.log(`已上線：${client.user.tag}`);
 
@@ -77,6 +81,9 @@ client.once(Events.ClientReady, async () => {
   console.log("Slash 指令已註冊");
 });
 
+// ======================
+// 資料處理
+// ======================
 async function getBalance(userId) {
   const snapshot = await get(ref(db, `balances/${userId}`));
   if (!snapshot.exists()) {
@@ -101,11 +108,17 @@ async function getTotal(userId) {
   return snapshot.exists() ? snapshot.val() : 0;
 }
 
+// ======================
+// 指令處理
+// ======================
 client.on(Events.InteractionCreate, async (i) => {
   if (!i.isChatInputCommand()) return;
 
   const isAdmin = i.member.roles.cache.some(r => r.name === ADMIN_ROLE);
 
+  // ======================
+  // 查餘額
+  // ======================
   if (i.commandName === "balance") {
 
     const target = i.options.getUser("user") || i.user;
@@ -121,17 +134,18 @@ client.on(Events.InteractionCreate, async (i) => {
     const total = await getTotal(target.id);
 
     return i.reply({
-		content:
-		`目前陪陪資訊如下 :
-	陪陪ID： ${target.username}\n
-	總累積薪資： ${total} 元\n
-	目前可提領： ${balance} 元`,
+      content:
+`目前陪陪資訊如下 :
+陪陪ID： ${target.username}
+
+總累積薪資： ${total} 元
+目前可提領： ${balance} 元${balance < 0 ? "（已透支）" : ""}`,
       ephemeral: true
     });
   }
 
   // ======================
-  // add（發薪水）
+  // 發薪水
   // ======================
   if (i.commandName === "add") {
 
@@ -153,16 +167,20 @@ client.on(Events.InteractionCreate, async (i) => {
     await addTotal(target.id, amount);
 
     return i.reply({
-		content:
-		`發薪完成！
-	陪陪ID： ${target.username}\n
-	此單金額： ${amount} 元\n
-	工單日期： ${date}\n
-	遊戲單別： ${type}\n
-	老闆名稱： ${boss}`
+      content:
+`發薪完成！
+陪陪ID： ${target.username}
+
+此單金額： ${amount} 元
+工單日期： ${date}
+遊戲單別： ${type}
+闆闆名字： ${boss}`
     });
   }
 
+  // ======================
+  // 提領（允許負數）
+  // ======================
   if (i.commandName === "charge") {
 
     if (!isAdmin) {
@@ -178,17 +196,17 @@ client.on(Events.InteractionCreate, async (i) => {
 
     const balance = await getBalance(target.id);
 
-    if (balance < amount) {
-      return i.reply({ content: "目前餘額不足", ephemeral: true });
-    }
-
+    // ✅ 不再阻止負數
     await updateBalance(target.id, -amount);
 
+    const newBalance = balance - amount;
+
     return i.reply({
-		content: `提領成功！
-	陪陪ID： ${target.username}\n
-	提領薪水： ${amount} 元\n
-	當前剩餘薪水： ${balance - amount} 元`
+      content: `提領成功！
+陪陪ID： ${target.username}
+
+提領薪水： ${amount} 元
+當前剩餘薪水： ${newBalance} 元${newBalance < 0 ? "（已透支）" : ""}`
     });
   }
 });
@@ -198,4 +216,5 @@ if (!process.env.TOKEN) {
   console.error("TOKEN 未設定");
   process.exit(1);
 }
+
 client.login(process.env.TOKEN);
