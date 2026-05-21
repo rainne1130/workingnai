@@ -61,7 +61,14 @@ const commands = [
     )
     .addIntegerOption(o =>
       o.setName('amount').setDescription('輸入提領金額').setRequired(true)
-    )
+    ),
+	
+	new SlashCommandBuilder()
+  .setName('cleartotal')
+  .setDescription('清除總累積薪資（老大限定）')
+  .addUserOption(o =>
+    o.setName('user').setDescription('選取陪陪').setRequired(true)
+  ),
 ];
 
 client.once(Events.ClientReady, async () => {
@@ -205,6 +212,34 @@ client.on(Events.InteractionCreate, async (i) => {
       embeds: [embed]
     });
   }
+  
+  if (i.commandName === "cleartotal") {
+
+	  if (!isAdmin) {
+		return i.reply({
+		  content: "您不是老大，無法使用!",
+		  ephemeral: true
+		});
+	  }
+
+	  const target = i.options.getUser("user");
+
+	  await set(ref(db, `total/${target.id}`), 0);
+
+	  const embed = new EmbedBuilder()
+		.setColor(0xED4245)
+		.setDescription(
+`已清除總累積薪資！
+
+陪陪ID： ${target.username}
+目前總累積薪資： 0 元`
+		);
+
+	  return i.reply({
+		embeds: [embed],
+		ephemeral: true
+	  });
+	}
 });
 
 // ======================
